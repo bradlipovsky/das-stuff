@@ -2,6 +2,19 @@ import numpy as np
 import datetime
 import h5py
 
+import glob
+def get_file_number(pth,t0):
+    
+    datestr = '{d.year}-{d.month:02}-{d.day:02}_{d.hour:02}-{d.minute:02}'.format(d=t0)
+
+    file = f"{pth}seadasn_{datestr}*.h5"
+
+    file_list = glob.glob(file)[0]
+    file_number = file_list.split('_')[-1]
+    file_number = file_number.split('.')[0]
+    file_number = int(file_number)
+    return file_number
+
 def sintela_to_datetime(sintela_times):
     '''
     returns an array of datetime.datetime 
