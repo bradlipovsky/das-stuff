@@ -3,11 +3,11 @@ import datetime
 import h5py
 
 import glob
-def get_file_number(pth,t0):
+def get_file_number(pth,prefix,t0):
     
     datestr = '{d.year}-{d.month:02}-{d.day:02}_{d.hour:02}-{d.minute:02}'.format(d=t0)
 
-    file = f"{pth}seadasn_{datestr}*.h5"
+    file = f"{pth}{prefix}_{datestr}*.h5"
 
     file_list = glob.glob(file)[0]
     file_number = file_list.split('_')[-1]
@@ -33,29 +33,37 @@ def sintela_to_datetime(sintela_times):
 
     return thisDateTime
 
-def open_sintela_file(file_base_name,number_of_files,sample_rate,
-                     file_duration,t0,file_number,pth,dt,
-                             chmin,chanmax):
+def open_sintela_file(file_base_name,t0,pth,
+                      chan_min=0,
+                      chan_max=-1,
+                      number_of_files=1):
 
     data = np.array([])
     time = np.array([])
-    samples_per_file = round(sample_rate * file_duration * 60)
-
+    file_number = get_file_number(pth,file_base_name,t0)
+    dt = datetime.timedelta(minutes=1) # Assume one minute file duration
+    
     this_files_date = t0
     for i in range(number_of_files):
 
         this_file_number = file_number + i
-        date_str = this_files_date.strftime("%Y-%m-%d_%H-%M-%S")
+#         date_str = this_files_date.strftime("%Y-%m-%d_%H-%M-%S")
+        date_str = this_files_date.strftime("%Y-%m-%d_%H-%M") + "-00"
         filename = file_base_name + '_' + date_str + '_UTC_' + f'{this_file_number:06}' + '.h5'
         this_file = pth+filename
         try:
             f = h5py.File(this_file,'r')
+            this_data = np.array(f['Acquisition/Raw[0]/RawData'][:,chan_min:chan_max])
+            this_time = np.array(f['Acquisition/Raw[0]/RawDataTime'])
+            
             if i == 0:
-                data = f['Acquisition/Raw[0]/RawData'][:,chmin:chanmax] 
-                time = f['Acquisition/Raw[0]/RawDataTime']
+                time = sintela_to_datetime(this_time)
+                data = this_data
+                attrs=dict(f['Acquisition'].attrs)
             else:
-                data = np.concatenate((data, f['Acquisition/Raw[0]/RawData'][:,chmin:chanmax] ))
-                time = np.concatenate((time,f['Acquisition/Raw[0]/RawDataTime']))
+                data = np.concatenate((data, this_data ))
+                time = np.concatenate((time, this_time ))
+                
         except Exception as e: 
             print('File problem with: %s'%this_file)
             print(e)
@@ -63,4 +71,4 @@ def open_sintela_file(file_base_name,number_of_files,sample_rate,
 
         this_files_date = this_files_date + dt
         
-    return data, time
+    return data, time, attrs
