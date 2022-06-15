@@ -3,6 +3,21 @@ import datetime
 import h5py
 
 import glob
+
+import obspy
+from obspy import UTCDateTime
+from datetime import datetime as DT
+
+def dt_to_utc_format(t):
+    return UTCDateTime(t.strftime('%Y-%m-%dT%H:%M:%S'))
+
+def utc_to_dt_format(t):
+    dt_str = t.strftime('%Y/%m/%d %H:%M:%S')
+    format1  = "%Y/%m/%d %H:%M:%S"
+    dt_utc = DT.strptime(dt_str, format1)
+    return dt_utc
+
+
 def get_file_number(pth,prefix,t0):
     
     datestr = '{d.year}-{d.month:02}-{d.day:02}_{d.hour:02}-{d.minute:02}'.format(d=t0)
