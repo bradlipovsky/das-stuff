@@ -9,6 +9,7 @@ def get_file_number(pth,prefix,t0):
 
     file = f"{pth}{prefix}_{datestr}*.h5"
 
+    print(file)
     file_list = glob.glob(file)[0]
     file_number = file_list.split('_')[-1]
     file_number = file_number.split('.')[0]
