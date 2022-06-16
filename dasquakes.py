@@ -8,6 +8,9 @@ import obspy
 from obspy import UTCDateTime
 from datetime import datetime as DT
 
+import matplotlib.pyplot as plt
+import matplotlib.dates as mdates
+
 def dt_to_utc_format(t):
     return UTCDateTime(t.strftime('%Y-%m-%dT%H:%M:%S'))
 
@@ -88,3 +91,60 @@ def open_sintela_file(file_base_name,t0,pth,
         this_files_date = this_files_date + dt
         
     return data, time, attrs
+
+def local_earthquake_quicklook(dates,datafilt,st,st2,x_max,event_df,catalog_index):
+
+    
+    
+    fig,ax=plt.subplots(figsize=(8,12))
+    date_format = mdates.DateFormatter('%H:%M:%S')
+    
+    # Subplot: DAS Data
+    ax=plt.subplot(4,1,1)
+    ax.set_title('SeaDAS-N')
+    # plt.imshow(datafilt.T,vmin=-0.1,vmax=0.1,cmap='seismic',aspect='auto')
+    x_lims = mdates.date2num(dates)
+    plt.imshow(datafilt.T,vmin=-.1,vmax=.1,cmap='seismic',aspect='auto', extent=[x_lims[0],x_lims[-1],0,x_max])
+    ax.xaxis.set_major_formatter(date_format)
+    ax.xaxis_date()
+    plt.grid()
+    
+    # Subplot: Single DAS Channel
+    ax = plt.subplot(4,1,2)
+    fig.patch.set_facecolor('w')
+    plt.plot(dates,datafilt[:,800])
+    ax.set_title('SeaDAS-N One Channel')
+    ax.xaxis.set_major_formatter(date_format)
+    ax.xaxis_date()
+    plt.grid()
+
+    
+    
+    # Subplot:  station 1
+    ax = plt.subplot(4,1,3)
+    for tr in st:
+        times_from_das = np.linspace(x_lims[0],x_lims[-1],len(tr.data))
+        plt.plot(times_from_das,tr.data)
+    fig.patch.set_facecolor('w')
+    ax.set_title('UW NOWS HNN')
+    ax.xaxis.set_major_formatter(date_format)
+    ax.xaxis_date()
+    plt.grid()
+    
+
+    # Subplot:  station 2
+    ax = plt.subplot(4,1,4)
+    for tr in st2:
+        times_from_das = np.linspace(x_lims[0],x_lims[-1],len(tr.data))
+        plt.plot(times_from_das,tr.data)
+    fig.patch.set_facecolor('w')
+    ax.set_title('IU COR BH1')
+    ax.xaxis.set_major_formatter(date_format)
+    ax.xaxis_date()
+    plt.grid()
+    
+    stitle=f"M{event_df.iloc[catalog_index]['Magnitude']}, {event_df.iloc[catalog_index]['Time UTC']} UTC"
+
+    fig.suptitle(stitle,fontsize=20)
+    plt.tight_layout()
+    plt.show()
