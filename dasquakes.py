@@ -27,13 +27,16 @@ def get_file_number(pth,prefix,t0):
 
     file = f"{pth}{prefix}_{datestr}*.h5"
 
-    print(file)
-    file_list = glob.glob(file)[0]
-    file_number = file_list.split('_')[-1]
-    file_number = file_number.split('.')[0]
-    file_number = int(file_number)
-    return file_number
-
+    if len(glob.glob(file)) > 0:
+        file_list = glob.glob(file)[0]
+#         print(glob.glob(file))
+        file_number = file_list.split('_')[-1]
+        file_number = file_number.split('.')[0]
+        file_number = int(file_number)
+        return file_number
+    else:
+        return -1
+    
 def sintela_to_datetime(sintela_times):
     '''
     returns an array of datetime.datetime 
@@ -59,17 +62,19 @@ def open_sintela_file(file_base_name,t0,pth,
 
     data = np.array([])
     time = np.array([])
-    file_number = get_file_number(pth,file_base_name,t0)
-    dt = datetime.timedelta(minutes=1) # Assume one minute file duration
+
     
+    dt = datetime.timedelta(minutes=1) # Assume one minute file duration
     this_files_date = t0
+    
     for i in range(number_of_files):
 
-        this_file_number = file_number + i
-#         date_str = this_files_date.strftime("%Y-%m-%d_%H-%M-%S")
+        file_number = get_file_number(pth,file_base_name,this_files_date)
+        if file_number == -1:
+            return [-1], [-1], [-1]
         date_str = this_files_date.strftime("%Y-%m-%d_%H-%M") + "-00"
-        filename = file_base_name + '_' + date_str + '_UTC_' + f'{this_file_number:06}' + '.h5'
-        this_file = pth+filename
+        this_file = f'{pth}{file_base_name}_{date_str}_UTC_{file_number:06}.h5'
+        
         try:
             f = h5py.File(this_file,'r')
             this_data = np.array(f['Acquisition/Raw[0]/RawData'][:,chan_min:chan_max])
@@ -86,16 +91,23 @@ def open_sintela_file(file_base_name,t0,pth,
         except Exception as e: 
             print('File problem with: %s'%this_file)
             print(e)
+            
+            # There's probably a better way to handle this...
+#             return [-1], [-1], [-1]
 
 
         this_files_date = this_files_date + dt
         
     return data, time, attrs
 
-def local_earthquake_quicklook(dates,datafilt,st,st2,x_max,event_df,catalog_index):
-
-    
-    
+def local_earthquake_quicklook(dates,datafilt,st,st2,
+                        x_max,event_df,catalog_index,filename=None,
+                        skip_seismograms=False,
+                        das_vmax=0.1):
+    '''
+    Make a nice plot of the DAS data and some local seismic stations
+    '''
+    dx = x_max / datafilt.shape[1]
     fig,ax=plt.subplots(figsize=(8,12))
     date_format = mdates.DateFormatter('%H:%M:%S')
     
@@ -104,7 +116,7 @@ def local_earthquake_quicklook(dates,datafilt,st,st2,x_max,event_df,catalog_inde
     ax.set_title('SeaDAS-N')
     # plt.imshow(datafilt.T,vmin=-0.1,vmax=0.1,cmap='seismic',aspect='auto')
     x_lims = mdates.date2num(dates)
-    plt.imshow(datafilt.T,vmin=-.1,vmax=.1,cmap='seismic',aspect='auto', extent=[x_lims[0],x_lims[-1],0,x_max])
+    plt.imshow(datafilt.T,vmin=-das_vmax,vmax=das_vmax,cmap='seismic',aspect='auto', extent=[x_lims[0],x_lims[-1],0,x_max])
     ax.xaxis.set_major_formatter(date_format)
     ax.xaxis_date()
     plt.grid()
@@ -112,39 +124,56 @@ def local_earthquake_quicklook(dates,datafilt,st,st2,x_max,event_df,catalog_inde
     # Subplot: Single DAS Channel
     ax = plt.subplot(4,1,2)
     fig.patch.set_facecolor('w')
-    plt.plot(dates,datafilt[:,800])
-    ax.set_title('SeaDAS-N One Channel')
+    graph_spacing = -400
+    for jj in (41,400,800,1400):
+        plt.plot(dates,datafilt[:,jj]-jj/graph_spacing,label=f'OD = {int(jj*dx)} m')
+    plt.legend(loc='upper left')
+    ax.set_title('SeaDAS-N Individual Channels')
     ax.xaxis.set_major_formatter(date_format)
     ax.xaxis_date()
     plt.grid()
 
-    
-    
-    # Subplot:  station 1
-    ax = plt.subplot(4,1,3)
-    for tr in st:
-        times_from_das = np.linspace(x_lims[0],x_lims[-1],len(tr.data))
-        plt.plot(times_from_das,tr.data)
-    fig.patch.set_facecolor('w')
-    ax.set_title('UW NOWS HNN')
-    ax.xaxis.set_major_formatter(date_format)
-    ax.xaxis_date()
-    plt.grid()
+
+    if skip_seismograms==False:
+        
+        if 'mag' in list(event_df):
+            stitle=f"M{event_df.iloc[catalog_index]['mag']}, {event_df.iloc[catalog_index]['time']} UTC"
+        else:
+            stitle=f"M{event_df.iloc[catalog_index]['Magnitude']}, {event_df.iloc[catalog_index]['Time UTC']} UTC"
+        
+        
+        # Subplot:  station 1
+        ax = plt.subplot(4,1,3)
+        for tr in st:
+            times_from_das = np.linspace(x_lims[0],x_lims[-1],len(tr.data))
+            plt.plot(times_from_das,tr.data)
+        fig.patch.set_facecolor('w')
+        ax.set_title('UW NOWS HNN')
+        ax.xaxis.set_major_formatter(date_format)
+        ax.xaxis_date()
+        plt.grid()
     
 
-    # Subplot:  station 2
-    ax = plt.subplot(4,1,4)
-    for tr in st2:
-        times_from_das = np.linspace(x_lims[0],x_lims[-1],len(tr.data))
-        plt.plot(times_from_das,tr.data)
-    fig.patch.set_facecolor('w')
-    ax.set_title('IU COR BH1')
-    ax.xaxis.set_major_formatter(date_format)
-    ax.xaxis_date()
-    plt.grid()
+        # Subplot:  station 2
+        ax = plt.subplot(4,1,4)
+        for tr in st2:
+            times_from_das = np.linspace(x_lims[0],x_lims[-1],len(tr.data))
+            plt.plot(times_from_das,tr.data)
+        fig.patch.set_facecolor('w')
+        ax.set_title('IU COR BH1')
+        ax.xaxis.set_major_formatter(date_format)
+        ax.xaxis_date()
+        plt.grid()
     
-    stitle=f"M{event_df.iloc[catalog_index]['Magnitude']}, {event_df.iloc[catalog_index]['Time UTC']} UTC"
+    
 
     fig.suptitle(stitle,fontsize=20)
     plt.tight_layout()
-    plt.show()
+    
+    if filename==None:
+        plt.show()
+    else:
+        plt.savefig(filename)
+        plt.close()
+    
+    
