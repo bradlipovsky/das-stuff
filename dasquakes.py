@@ -21,11 +21,13 @@ def utc_to_dt_format(t):
     return dt_utc
 
 
-def get_file_number(pth,prefix,t0):
+def get_file_number(pth,prefix,t0,verbose=False):
     
     datestr = '{d.year}-{d.month:02}-{d.day:02}_{d.hour:02}-{d.minute:02}'.format(d=t0)
 
     file = f"{pth}{prefix}_{datestr}*.h5"
+    if verbose:
+        print(file)
 
     if len(glob.glob(file)) > 0:
         file_list = glob.glob(file)[0]
@@ -58,7 +60,8 @@ def sintela_to_datetime(sintela_times):
 def open_sintela_file(file_base_name,t0,pth,
                       chan_min=0,
                       chan_max=-1,
-                      number_of_files=1):
+                      number_of_files=1,
+                      verbose=False):
 
     data = np.array([])
     time = np.array([])
@@ -69,16 +72,19 @@ def open_sintela_file(file_base_name,t0,pth,
     
     for i in range(number_of_files):
 
-        file_number = get_file_number(pth,file_base_name,this_files_date)
+        file_number = get_file_number(pth,file_base_name,this_files_date,verbose=verbose)
         if file_number == -1:
+            print('Failed to find file number.')
             return [-1], [-1], [-1]
         date_str = this_files_date.strftime("%Y-%m-%d_%H-%M") + "-00"
         this_file = f'{pth}{file_base_name}_{date_str}_UTC_{file_number:06}.h5'
         
         try:
             f = h5py.File(this_file,'r')
-            this_data = np.array(f['Acquisition/Raw[0]/RawData'][:,chan_min:chan_max])
-            this_time = np.array(f['Acquisition/Raw[0]/RawDataTime'])
+            this_data = np.array(
+                f['Acquisition/Raw[0]/RawData'][:,chan_min:chan_max])
+            this_time = np.array(
+                f['Acquisition/Raw[0]/RawDataTime'])
             
             if i == 0:
                 time = sintela_to_datetime(this_time)
@@ -101,9 +107,10 @@ def open_sintela_file(file_base_name,t0,pth,
     return data, time, attrs
 
 def local_earthquake_quicklook(dates,datafilt,st,st2,
-                        x_max,event_df,catalog_index,filename=None,
+                        x_max,stitle,filename=None,
                         skip_seismograms=False,
-                        das_vmax=0.1):
+                        das_vmax=0.1,
+                        network_name=''):
     '''
     Make a nice plot of the DAS data and some local seismic stations
     '''
@@ -113,10 +120,12 @@ def local_earthquake_quicklook(dates,datafilt,st,st2,
     
     # Subplot: DAS Data
     ax=plt.subplot(4,1,1)
-    ax.set_title('SeaDAS-N')
+    ax.set_title(f'{network_name}')
     # plt.imshow(datafilt.T,vmin=-0.1,vmax=0.1,cmap='seismic',aspect='auto')
     x_lims = mdates.date2num(dates)
-    plt.imshow(datafilt.T,vmin=-das_vmax,vmax=das_vmax,cmap='seismic',aspect='auto', extent=[x_lims[0],x_lims[-1],0,x_max])
+    plt.imshow(datafilt.T,vmin=-das_vmax,vmax=das_vmax,
+               cmap='seismic',aspect='auto', 
+               extent=[x_lims[0],x_lims[-1],0,x_max])
     ax.xaxis.set_major_formatter(date_format)
     ax.xaxis_date()
     plt.grid()
@@ -128,19 +137,14 @@ def local_earthquake_quicklook(dates,datafilt,st,st2,
     for jj in (41,400,800,1400):
         plt.plot(dates,datafilt[:,jj]-jj/graph_spacing,label=f'OD = {int(jj*dx)} m')
     plt.legend(loc='upper left')
-    ax.set_title('SeaDAS-N Individual Channels')
+    ax.set_title(f'{network_name} Individual Channels')
     ax.xaxis.set_major_formatter(date_format)
     ax.xaxis_date()
+    ax.autoscale(enable=True, axis='x', tight=True)
     plt.grid()
 
 
     if skip_seismograms==False:
-        
-        if 'mag' in list(event_df):
-            stitle=f"M{event_df.iloc[catalog_index]['mag']}, {event_df.iloc[catalog_index]['time']} UTC"
-        else:
-            stitle=f"M{event_df.iloc[catalog_index]['Magnitude']}, {event_df.iloc[catalog_index]['Time UTC']} UTC"
-        
         
         # Subplot:  station 1
         ax = plt.subplot(4,1,3)
@@ -151,6 +155,7 @@ def local_earthquake_quicklook(dates,datafilt,st,st2,
         ax.set_title('UW NOWS HNN')
         ax.xaxis.set_major_formatter(date_format)
         ax.xaxis_date()
+        ax.set_xlim((min(times_from_das),max(times_from_das)))
         plt.grid()
     
 
@@ -163,6 +168,7 @@ def local_earthquake_quicklook(dates,datafilt,st,st2,
         ax.set_title('IU COR BH1')
         ax.xaxis.set_major_formatter(date_format)
         ax.xaxis_date()
+        ax.set_xlim((min(times_from_das),max(times_from_das)))
         plt.grid()
     
     
