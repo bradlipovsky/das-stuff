@@ -11,6 +11,23 @@ from datetime import datetime as DT
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 
+def data_wrangler(cable,record_length,t0):
+    if cable == 'seadasn':
+        prefix = 'seadasn'
+        network_name = 'SeaDAS-N'
+        if t0 < datetime.datetime(2022, 6, 20, 0, 0, 0):
+            datastore='/data/data0/seadasn_2022-03-17_2022-06-20/'
+        else:
+            datastore='/data/data7/seadasn/'
+
+    elif cable == 'whidbey':
+        prefix = 'whidbey'
+        network_name='Whidbey-DAS'
+        datastore = '/data/data5/Converted/'
+        
+    return prefix, network_name, datastore
+
+
 def dt_to_utc_format(t):
     return UTCDateTime(t.strftime('%Y-%m-%dT%H:%M:%S'))
 
