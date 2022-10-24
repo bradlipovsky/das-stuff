@@ -28,7 +28,7 @@ def main():
     '''
 
     q = 10           # decimation factor
-    N = 24*1         # number of samples to analyze
+    N = 24*100       # number of samples to analyze
     dt = 60          # number of minutes between samples
     nt = int(6000/q) # Number of time steps in each sample
     nx = 375         # Number of subsea channels at Whidbey
@@ -37,11 +37,14 @@ def main():
     '''
     Begin the workflow
     '''
-    svd_analysis()
+#     svd_analysis(N=N)
     
     file = open(filename, 'rb')
     U,S,V,t,f,k = pickle.load(file)
     file.close()
+    
+    f = fftshift(fftfreq(nt, d=0.01 * q))
+    k = fftshift(fftfreq(nx, d=6.38))
     
     first_mode = U[:,5]
     first_mode = np.abs(U[:,5].reshape((nt,nx))/np.max(np.abs(first_mode)))
