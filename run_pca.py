@@ -19,17 +19,42 @@ from time import perf_counter
 from scipy.sparse.linalg import svds
 from tqdm import tqdm
 from dasquakes import *
+import pickle
 
 def main():
     t0 = perf_counter()
-
     '''
     Parameters for the analysis
     '''
-    start_time = datetime.datetime(2022, 5, 8, 0, 0, 0)
-    q = 10  # decimation factor
-    N = 24*100 # number of samples to analyze
-    dt = 60 # number of minutes between samples
+
+    q = 10           # decimation factor
+    N = 24*1         # number of samples to analyze
+    dt = 60          # number of minutes between samples
+    nt = int(6000/q) # Number of time steps in each sample
+    nx = 375         # Number of subsea channels at Whidbey
+    filename = 'svd.pickle'
+    
+    '''
+    Begin the workflow
+    '''
+    svd_analysis()
+    
+    file = open(filename, 'rb')
+    U,S,V,t,f,k = pickle.load(file)
+    file.close()
+    
+    first_mode = U[:,5]
+    first_mode = np.abs(U[:,5].reshape((nt,nx))/np.max(np.abs(first_mode)))
+    first_time_series = V[5,:]
+    
+    plot_svd(S,f,k,t,first_mode,first_time_series)
+    print(f'Total runtime: {perf_counter()-t0} s')
+    
+    
+def svd_analysis(q=10,N=24,dt=60,
+                 start_time = datetime.datetime(2022, 5, 8, 0, 0, 0), 
+                 outputfile='svd.pickle'):
+    
     
     '''
     Build the data matrix
@@ -72,20 +97,26 @@ def main():
     U,S,V = svds( D[:,0:ns] )
     t = t[0:ns]
     print(f'SVD runtime:   {perf_counter()-t1} s')
-
-    vm = 0.1
-    first_mode = U[:,5]
-    first_mode = np.abs(U[:,5].reshape((nt,nx))/np.max(np.abs(first_mode)))
-    first_time_series = V[5,:]
     
+    # open a file, where you ant to store the data
+    file = open(outputfile, 'wb')
+    pickle.dump((U,S,V,t,f,k), file)
+    file.close()
+    
+    
+
+def plot_svd(S,f,k,t,mode,time_series):
+
     '''
     Plot the results
     '''
+    vm = 0.1
+    
     plt.subplots(2,1,figsize=(10,10))
 
     ax1=plt.subplot(2,1,1)
-    plt.title(f'Fraction of variance in 1st mode: {100*max(S)/sum(S):.1f}%')
-    c=plt.imshow(first_mode,aspect='auto',vmin=0,vmax=vm,extent=[k[0],k[-1],f[0],f[-1]],cmap='gray_r')
+    plt.title(f'Fraction of variance in 1st mode: {100*max(S)/sum(S)}%')
+    c=plt.imshow(mode,aspect='auto',vmin=0,vmax=vm,extent=[k[0],k[-1],f[0],f[-1]],cmap='gray_r')
 
     ax1.set_ylim([-2.5,2.5])
     ax1.set_xlim([-0.04,0.04])
@@ -94,17 +125,13 @@ def main():
 #     plt.colorbar()
 
     ax2=plt.subplot(2,1,2)
-    print(first_time_series)
-    ind = np.where(np.abs(first_time_series)>1e-10)
-    sign_change = np.sign(np.mean(first_time_series))
-    ax2.plot(t[ind],first_time_series[ind]*sign_change,'o')
+    ind = np.where(np.abs(time_series)>1e-10)
+    sign_change = np.sign(np.mean(time_series))
+    ax2.plot(t[ind],time_series[ind]*sign_change,'o')
     plt.xticks(rotation = 25)
     ax2.grid()
     
-    plt.savefig('pca.pdf')
-
-
-    print(f'Total runtime: {perf_counter()-t0} s')
+    plt.savefig('svd_plot.pdf')
 
 
 if __name__ == "__main__":
