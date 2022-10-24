@@ -1,3 +1,12 @@
+'''
+SVD analysis of Distributed Acoustic Sensing (DAS) frequency-wavenumber (FK) plots.
+
+TODO: Load acquisition parameters from each file rather than assuming they are fixed for the entire duration.
+
+TODO: Add wind speed data
+
+TODO: Convert frequency-wavenumber to frequency-wavespeed
+'''
 import h5py
 import matplotlib.pyplot as plt
 import numpy as np
