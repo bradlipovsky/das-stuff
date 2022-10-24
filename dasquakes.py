@@ -1,13 +1,10 @@
 import numpy as np
 import datetime
 import h5py
-
 import glob
-
-import obspy
-from obspy import UTCDateTime
+from scipy.signal import detrend
+from numpy.fft import fftshift, fft2, fftfreq
 from datetime import datetime as DT
-
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 
@@ -29,6 +26,7 @@ def data_wrangler(cable,record_length,t0):
 
 
 def dt_to_utc_format(t):
+    from obspy import UTCDateTime
     return UTCDateTime(t.strftime('%Y-%m-%dT%H:%M:%S'))
 
 def utc_to_dt_format(t):
@@ -240,3 +238,28 @@ def data_quicklook(     dates,datafilt,
     else:
         plt.savefig(filename)
         plt.close()
+        
+def fk_analysis(t0, draw_figure = True,downsamplefactor=5,cable = 'whidbey', record_length = 1):
+    
+    prefix, network_name, datastore = data_wrangler(cable,record_length,t0)
+    try:
+        data,dates,attrs = open_sintela_file(prefix,
+                                         t0,
+                                         datastore,
+                                         number_of_files=record_length,
+                                         verbose=False)
+    except:
+        print("error'ed out")
+        return [np.nan], [np.nan], [np.nan]
+    
+    x1 = 1225     # Entire subsea region
+    x2 = 1600
+
+    subsea_data = detrend(data[:,x1:x2])
+    downsampled_subsea_data = subsea_data[::downsamplefactor,:]
+
+    ft = fftshift(fft2(downsampled_subsea_data))
+    f = fftshift(fftfreq(downsampled_subsea_data.shape[0], d=0.01 * downsamplefactor))
+    k = fftshift(fftfreq(downsampled_subsea_data.shape[1], d=attrs['SpatialSamplingInterval']))
+    
+    return ft,f,k
