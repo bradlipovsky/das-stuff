@@ -6,6 +6,10 @@ TODO: Load acquisition parameters from each file rather than assuming they are f
 TODO: Add wind speed data
 
 TODO: Convert frequency-wavenumber to frequency-wavespeed
+
+TODO: Experiment with stacking parameters.  Note that SGWs appear with longer stacking windows.
+
+TODO: Speed up the calculations using multiprocessing.
 '''
 import h5py
 import matplotlib.pyplot as plt
