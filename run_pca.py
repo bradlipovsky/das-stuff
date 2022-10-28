@@ -37,7 +37,7 @@ def main():
     '''
     Begin the workflow
     '''
-#     svd_analysis(N=N)
+    svd_analysis(N=N)
     
     file = open(filename, 'rb')
     U,S,V,t,f,k = pickle.load(file)
@@ -70,7 +70,8 @@ def svd_analysis(q=10,N=24,dt=60,
     for i in tqdm(range(N)):
         this_time = start_time + i*datetime.timedelta(minutes=dt)
         t.append(this_time)
-        ft,f,k = fk_analysis(this_time,draw_figure=False,downsamplefactor=q)
+        ft,f,k = fk_analysis(this_time,draw_figure=False,downsamplefactor=q,
+                            record_length = 2)
         if len(ft) == 1:
             continue
 
@@ -134,7 +135,7 @@ def plot_svd(S,f,k,t,mode,time_series):
     plt.xticks(rotation = 25)
     ax2.grid()
     
-    plt.savefig('svd_plot.pdf')
+    plt.savefig('svd_plot_2min_stacks.pdf')
 
 
 if __name__ == "__main__":
