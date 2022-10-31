@@ -1,13 +1,10 @@
 import numpy as np
 import datetime
 import h5py
-
 import glob
-
-import obspy
-from obspy import UTCDateTime
+from scipy.signal import detrend
+from numpy.fft import fftshift, fft2, fftfreq
 from datetime import datetime as DT
-
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 
@@ -29,6 +26,7 @@ def data_wrangler(cable,record_length,t0):
 
 
 def dt_to_utc_format(t):
+    from obspy import UTCDateTime
     return UTCDateTime(t.strftime('%Y-%m-%dT%H:%M:%S'))
 
 def utc_to_dt_format(t):
@@ -78,7 +76,8 @@ def open_sintela_file(file_base_name,t0,pth,
                       chan_min=0,
                       chan_max=-1,
                       number_of_files=1,
-                      verbose=False):
+                      verbose=False,
+                      pad=False):
 
     data = np.array([])
     time = np.array([])
@@ -91,8 +90,8 @@ def open_sintela_file(file_base_name,t0,pth,
 
         file_number = get_file_number(pth,file_base_name,this_files_date,verbose=verbose)
         if file_number == -1:
-            print('Failed to find file number.')
-            return [-1], [-1], [-1]
+            raise ValueError('Failed to find file number.')
+#             return [-1], [-1], [-1]
         date_str = this_files_date.strftime("%Y-%m-%d_%H-%M") + "-00"
         this_file = f'{pth}{file_base_name}_{date_str}_UTC_{file_number:06}.h5'
         
@@ -116,10 +115,13 @@ def open_sintela_file(file_base_name,t0,pth,
             print(e)
             
             # There's probably a better way to handle this...
-#             return [-1], [-1], [-1]
+            #             return [-1], [-1], [-1]
 
 
         this_files_date = this_files_date + dt
+    
+    #if pad==True:
+        # Add columns of zeros to give data matrix the correct dimensions
         
     return data, time, attrs
 
@@ -142,7 +144,7 @@ def local_earthquake_quicklook(dates,datafilt,st,st2,
     x_lims = mdates.date2num(dates)
     plt.imshow(datafilt.T,vmin=-das_vmax,vmax=das_vmax,
                cmap='seismic',aspect='auto', 
-               extent=[x_lims[0],x_lims[-1],0,x_max])
+               extent=[x_lims[0],x_lims[-1],x_max,0])
     ax.xaxis.set_major_formatter(date_format)
     ax.xaxis_date()
     plt.grid()
@@ -150,10 +152,11 @@ def local_earthquake_quicklook(dates,datafilt,st,st2,
     # Subplot: Single DAS Channel
     ax = plt.subplot(4,1,2)
     fig.patch.set_facecolor('w')
-    graph_spacing = -400
+#     graph_spacing = -400
+    graph_spacing = -20
     for jj in (41,400,800,1400):
         plt.plot(dates,datafilt[:,jj]-jj/graph_spacing,label=f'OD = {int(jj*dx)} m')
-    plt.legend(loc='upper left')
+    plt.legend(loc='upper right')
     ax.set_title(f'{network_name} Individual Channels')
     ax.xaxis.set_major_formatter(date_format)
     ax.xaxis_date()
@@ -200,3 +203,63 @@ def local_earthquake_quicklook(dates,datafilt,st,st2,
         plt.close()
     
     
+def data_quicklook(     dates,datafilt,
+                        x_max,stitle,filename=None,
+                        das_vmax=0.1,
+                        network_name='',
+                        ylim=None):
+    '''
+    Make a nice plot of DAS data 
+    '''
+    dx = x_max / datafilt.shape[1]
+    fig,ax=plt.subplots(figsize=(10,10))
+    date_format = mdates.DateFormatter('%H:%M:%S')
+    
+    # Subplot: DAS Data
+
+    ax.set_title(f'{network_name}')
+    # plt.imshow(datafilt.T,vmin=-0.1,vmax=0.1,cmap='seismic',aspect='auto')
+    x_lims = mdates.date2num(dates)
+    plt.imshow(datafilt.T,vmin=-das_vmax,vmax=das_vmax,
+               cmap='seismic',aspect='auto', 
+               extent=[x_lims[0],x_lims[-1],x_max,0])
+    ax.xaxis.set_major_formatter(date_format)
+    ax.xaxis_date()
+    plt.grid()
+    if ylim is not None:
+        ax.set_ylim(ylim)
+    
+
+    fig.suptitle(stitle,fontsize=20)
+    plt.tight_layout()
+    
+    if filename==None:
+        plt.show()
+    else:
+        plt.savefig(filename)
+        plt.close()
+        
+def fk_analysis(t0, draw_figure = True,downsamplefactor=5,cable = 'whidbey', record_length = 1):
+    
+    prefix, network_name, datastore = data_wrangler(cable,record_length,t0)
+    try:
+        data,dates,attrs = open_sintela_file(prefix,
+                                         t0,
+                                         datastore,
+                                         number_of_files=record_length,
+                                         verbose=False)
+    except:
+        print("error'ed out")
+        return [np.nan], [np.nan], [np.nan]
+    
+    x1 = 1225     # Entire subsea region
+    x2 = 1600
+
+    subsea_data = detrend(data[:,x1:x2])
+    downsampled_subsea_data = subsea_data[::downsamplefactor,:]
+
+    ft = fftshift(fft2(downsampled_subsea_data))
+    f = fftshift(fftfreq(downsampled_subsea_data.shape[0], d=0.01 * downsamplefactor))
+    k = fftshift(fftfreq(downsampled_subsea_data.shape[1], d=attrs['SpatialSamplingInterval']))
+    
+    return ft,f,k
