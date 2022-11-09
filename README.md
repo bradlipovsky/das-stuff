@@ -1,4 +1,4 @@
-# DAS Stuff - LocalEarthquakes
+# DAS Stuff - Local Earthquakes
   
   Work in this branch is branch is primarily seismic velocity inversion.
 
