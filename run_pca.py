@@ -102,7 +102,8 @@ def svd_analysis(q=10,N=24,dt=60,
     t = t[0:ns]
     print(f'SVD runtime:   {perf_counter()-t1} s')
     
-    # open a file, where you ant to store the data
+    # open a file, where you want to store the data
+    #wb=writing in a binary mode
     file = open(outputfile, 'wb')
     pickle.dump((U,S,V,t,f,k), file)
     file.close()

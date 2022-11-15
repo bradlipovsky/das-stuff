@@ -239,7 +239,7 @@ def data_quicklook(     dates,datafilt,
         plt.savefig(filename)
         plt.close()
         
-def fk_analysis(t0, draw_figure = True,downsamplefactor=5,cable = 'whidbey', record_length = 1):
+def fk_analysis(t0, draw_figure = True,downsamplefactor=5,cable = 'whidbey', record_length = 10):
     
     prefix, network_name, datastore = data_wrangler(cable,record_length,t0)
     try:
