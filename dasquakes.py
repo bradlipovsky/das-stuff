@@ -18,8 +18,10 @@ def data_wrangler(cable,record_length,t0):
         network_name = 'SeaDAS-N'
         if t0 < datetime.datetime(2022, 10, 20, 0, 0, 0):
             datastore='/data/data0/seadasn_2022-03-17_2022-06-20/'
+        elif (t0 >= datetime.datetime(2022, 6, 20, 0, 0, 0)) and (t0 < datetime.datetime(2022, 10, 7, 0, 0, 0)):
+            datastore='/data/data7/seadasn_2022-06-21_2022-10-06/'
         else:
-            datastore='/data/data7/seadasn/'
+            datastore='/data/data3/seadasn/'
 
     elif cable == 'whidbey':
         prefix = 'whidbey'
@@ -83,8 +85,12 @@ def open_sintela_file(file_base_name,t0,pth,
 #         this_file = f'{pth}{file_base_name}_{date_str}_UTC_{file_number:06}.h5'
         partial_file_name = f'{pth}{file_base_name}_{date_str}'
         file_search = glob.glob(f'{partial_file_name}*h5')
+        if verbose:
+            print(f'Searching for files matching: {partial_file_name}*h5')
         if len(file_search) > 1:
             raise ValueError("Why are there more than one files? That shouldn't be possible!")
+        elif len(file_search) == 0:
+            raise ValueError("Why are there ZERO files? That shouldn't be possible!")
         else:
             this_file = file_search[0]
         
