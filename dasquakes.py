@@ -154,7 +154,8 @@ def local_earthquake_quicklook(dates,datafilt,st,st2,
     fig.patch.set_facecolor('w')
 #     graph_spacing = -400
     graph_spacing = -20
-    for jj in (41,400,800,1400):
+    #,400,800,1400
+    for jj in (41,50):
         plt.plot(dates,datafilt[:,jj]-jj/graph_spacing,label=f'OD = {int(jj*dx)} m')
     plt.legend(loc='upper right')
     ax.set_title(f'{network_name} Individual Channels')
