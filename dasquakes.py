@@ -71,7 +71,7 @@ def open_sintela_file(file_base_name,t0,pth,
 
     data = np.array([])
     time = np.array([])
-
+    errors=0
     
     dt = datetime.timedelta(minutes=1) # Assume one minute file duration
     this_files_date = t0
@@ -86,10 +86,12 @@ def open_sintela_file(file_base_name,t0,pth,
         partial_file_name = f'{pth}{file_base_name}_{date_str}'
         file_search = glob.glob(f'{partial_file_name}*h5')
         if verbose:
-            print(f'Searching for files matching: {partial_file_name}*h5')
+            axx=0
+            #print(f'Searching for files matching: {partial_file_name}*h5')
         if len(file_search) > 1:
             raise ValueError("Why are there more than one files? That shouldn't be possible!")
         elif len(file_search) == 0:
+            errors=1
             raise ValueError("Why are there ZERO files? That shouldn't be possible!")
         else:
             this_file = file_search[0]
@@ -122,7 +124,7 @@ def open_sintela_file(file_base_name,t0,pth,
     #if pad==True:
         # Add columns of zeros to give data matrix the correct dimensions
         
-    return data, time, attrs
+    return data, time, attrs, errors
 
 def local_earthquake_quicklook(dates,datafilt,st,st2,
                         x_max,stitle,filename=None,
