@@ -255,7 +255,7 @@ def fk_analysis(t0, draw_figure = True,downsamplefactor=5,cable = 'whidbey', rec
                                          t0,
                                          datastore,
                                          number_of_files=record_length,
-                                         verbose=False)
+                                         verbose=True)
     except:
         print("error'ed out")
         return [np.nan], [np.nan], [np.nan]
@@ -267,7 +267,7 @@ def fk_analysis(t0, draw_figure = True,downsamplefactor=5,cable = 'whidbey', rec
     downsampled_subsea_data = subsea_data[::downsamplefactor,:]
 
     ft = fftshift(fft2(downsampled_subsea_data))
-    f = fftshift(fftfreq(downsampled_subsea_data.shape[0], d=0.01 * downsamplefactor))
+    f = fftshift(fftfreq(downsampled_subsea_data.shape[0], d=1/(2*attrs['MaximumFrequency']) * downsamplefactor))
     k = fftshift(fftfreq(downsampled_subsea_data.shape[1], d=attrs['SpatialSamplingInterval']))
     
     return ft,f,k
