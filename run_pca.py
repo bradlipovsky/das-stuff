@@ -28,16 +28,17 @@ def main():
     '''
 
     q = 10           # decimation factor
-    N = 24*100       # number of samples to analyze
-    dt = 60          # number of minutes between samples
-    nt = int(6000/q) # Number of time steps in each sample
+    N = 24*100       # number of steps
+    dt = 60          # minutes between steps
+    record_length=15 # minutes per step
+    nt = int(record_length*6000/q) # Number of time steps in each sample
     nx = 375         # Number of subsea channels at Whidbey
     filename = 'svd.pickle'
     
     '''
     Begin the workflow
     '''
-    svd_analysis(N=N)
+    svd_analysis(N=N,dt=dt,q=q,outputfile=filename,record_length=record_length)
     
     file = open(filename, 'rb')
     U,S,V,t,f,k = pickle.load(file)
@@ -50,11 +51,16 @@ def main():
     first_mode = np.abs(U[:,5].reshape((nt,nx))/np.max(np.abs(first_mode)))
     first_time_series = V[5,:]
     
-    plot_svd(S,f,k,t,first_mode,first_time_series)
+    second_mode = U[:,4]
+    second_mode = np.abs(U[:,4].reshape((nt,nx))/np.max(np.abs(second_mode)))
+    second_time_series = V[4,:]
+    
+    plot_svd(S,f,k,t,first_mode,first_time_series,'svd_plot_mode-1.pdf')
+    plot_svd(S,f,k,t,second_mode,second_time_series,'svd_plot_mode-1.pdf')
     print(f'Total runtime: {perf_counter()-t0} s')
     
     
-def svd_analysis(q=10,N=24,dt=60,
+def svd_analysis(q=10,N=24,dt=60,record_length=2,
                  start_time = datetime.datetime(2022, 5, 8, 0, 0, 0), 
                  outputfile='svd.pickle'):
     
@@ -62,7 +68,9 @@ def svd_analysis(q=10,N=24,dt=60,
     '''
     Build the data matrix
     '''
-    nt = int(6000/q) # Number of time steps in each sample
+    fs = 100
+    file_duration = 60
+    nt = int(record_length*file_duration*fs/q) # Number of time steps in each sample
     nx = 375 # Number of subsea channels at Whidbey
     D = np.zeros((nx*nt,N))
     t = []
@@ -71,7 +79,7 @@ def svd_analysis(q=10,N=24,dt=60,
         this_time = start_time + i*datetime.timedelta(minutes=dt)
         t.append(this_time)
         ft,f,k = fk_analysis(this_time,draw_figure=False,downsamplefactor=q,
-                            record_length = 2)
+                            record_length = record_length)
         if len(ft) == 1:
             continue
 
@@ -109,7 +117,7 @@ def svd_analysis(q=10,N=24,dt=60,
     
     
 
-def plot_svd(S,f,k,t,mode,time_series):
+def plot_svd(S,f,k,t,mode,time_series,filename='svd_plot.pdf'):
 
     '''
     Plot the results
@@ -135,7 +143,7 @@ def plot_svd(S,f,k,t,mode,time_series):
     plt.xticks(rotation = 25)
     ax2.grid()
     
-    plt.savefig('svd_plot_2min_stacks.pdf')
+    plt.savefig(filename)
 
 
 if __name__ == "__main__":
