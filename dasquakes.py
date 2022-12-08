@@ -238,15 +238,17 @@ def data_quicklook(     dates,datafilt,
         plt.savefig(filename)
         plt.close()
         
-def fk_analysis(t0, draw_figure = True,downsamplefactor=5,cable = 'whidbey', record_length = 1,
-               channel_range=[1225,1600]):
+def fk_analysis(t0, 
+                draw_figure = True,
+                fs=10, dx=6.38,
+                cable = 'whidbey', 
+                record_length = 1,
+                distance_range=[7816,10208],
+                verbose = True):
     '''
     This function takes inputs that describe a subset of a DAS deployment and returns FK data.
 
-    The default channel range represents the subsea part of the whidbey cable
-
-    TODO the definition of f assumes d=0.01, i.e., 100 Hz data.  The sampling rate should be read from
-    attrs instead.
+    The default distance range represents the subsea part of the whidbey cable
     '''
     
     prefix, network_name, datastore = data_wrangler(cable,record_length,t0)
@@ -260,15 +262,31 @@ def fk_analysis(t0, draw_figure = True,downsamplefactor=5,cable = 'whidbey', rec
         print("error'ed out")
         return [np.nan], [np.nan], [np.nan]
     
-    x1 = channel_range[0]
-    x2 = channel_range[1]
+    ''' 
+    Downsampling
+    '''
+    fs_input = 2*attrs['MaximumFrequency']
+    t_downsample_factor = int(fs_input/fs)
+    if verbose: print(f"Temporal downsampling factor = {t_downsample_factor}")
+    
+    dx_input = attrs['SpatialSamplingInterval']
+    x_downsample_factor = int(dx_input/dx)
+    if verbose: print(f"Spatial downsampling factor = {x_downsample_factor}")
+    
+    x1 = int(distance_range[0]/dx_input)
+    x2 = int(distance_range[1]/dx_input)
 
-    subsea_data = detrend(data[:,x1:x2])
-    downsampled_subsea_data = subsea_data[::downsamplefactor,:]
+    subsea_data = detrend(data[:,x1:x2:x_downsample_factor])
+    downsampled_subsea_data = subsea_data[::t_downsample_factor,:]
+    if verbose: print(f"Data dimension: {downsampled_subsea_data.shape}")
+    
+    '''
+    Calculate FFT
+    '''
 
     ft = fftshift(fft2(downsampled_subsea_data))
-    f = fftshift(fftfreq(downsampled_subsea_data.shape[0], d=1/(2*attrs['MaximumFrequency']) * downsamplefactor))
-    k = fftshift(fftfreq(downsampled_subsea_data.shape[1], d=attrs['SpatialSamplingInterval']))
+    f = fftshift(fftfreq(downsampled_subsea_data.shape[0], d=1/fs))
+    k = fftshift(fftfreq(downsampled_subsea_data.shape[1], d=dx))
     
     return ft,f,k
 
@@ -363,3 +381,102 @@ def svd_analysis(q=10,N=24,dt=60,
     file = open(f'{outputfile}.pickle', 'wb')
     pickle.dump((U,S,V,t,f,k), file)
     file.close()
+
+    
+    
+def svd_analysis(N=24,dt=60,dx=6.38,fs=10,
+                 distance_range=[7816,10208], 
+                 record_length=2,
+                 start_time = datetime.datetime(2022, 5, 8, 0, 0, 0), 
+                 outputfile='svd.pickle',
+                 verbose=False):
+    '''
+    Build the data matrix
+    '''
+    file_duration = 60 #seconds.  this shouldn't change through the deployment.
+
+    # Number of time steps in each sample
+    nt = int(record_length*file_duration*fs) 
+    
+    # Number of subsea channels at Whidbey. This also changes.
+    nx = int((distance_range[1]-distance_range[0]+1)/dx) 
+    
+    if verbose: print(f"nx={nx}, nt={nt}")
+    
+    D = np.zeros((nx*nt,N))
+    t = []
+
+    for i in tqdm(range(N)):
+
+        this_time = start_time + i*datetime.timedelta(minutes=dt)
+        t.append(this_time)
+        ft,f,k = fk_analysis(this_time,draw_figure=False,fs=fs, 
+                            record_length = record_length,
+                            distance_range = distance_range,
+                            verbose=verbose)
+        if len(ft) == 1:
+            continue
+
+        this_nt = ft.shape[0]
+        this_nx = ft.shape[1]
+
+        if this_nt < nt:
+            ft_new = np.zeros((nt,nx))
+            ft_new[0:this_nt,0:nx] = np.abs(ft)
+            this_column =  ft_new.flatten()
+        elif this_nt > nt:
+            ft_new = np.zeros((nt,nx))
+            ft_new[0:nt,0:nx] = np.abs(ft[0:nt,0:nx])
+            this_column =  ft_new.flatten()
+        else:
+            # This should be the typically situation: there are exactly as many time steps as we anticipated.
+            this_column = np.abs( ft.flatten() )
+
+        D[:,i] = this_column
+
+
+    t=np.array(t)
+    
+    '''
+    Calculate the SVD
+    '''
+    ns = N
+    t1 = perf_counter()
+    U,S,V = svds( D[:,0:ns] )
+    t = t[0:ns]
+    print(f'SVD runtime:   {perf_counter()-t1} s')
+    
+    # open a file, where you ant to store the data
+    file = open(outputfile, 'wb')
+    pickle.dump((U,S,V,t,f,k,nt,nx), file)
+    file.close()
+    
+    
+
+def plot_svd(f,k,t,mode,time_series,var,filename='svd_plot.pdf'):
+
+    '''
+    Plot the results
+    '''
+    vm = 0.1
+    
+    plt.subplots(2,1,figsize=(10,10))
+
+    ax1=plt.subplot(2,1,1)
+    plt.title(f'Fraction of variance in this mode: {var}%')
+    c=plt.imshow(mode,aspect='auto',vmin=0,vmax=vm,extent=[k[0],k[-1],f[0],f[-1]],cmap='gray_r')
+
+    ax1.set_ylim([-2.5,2.5])
+    ax1.set_xlim([-0.04,0.04])
+    ax1.set_xlabel('Wavenumber (1/m)')
+    ax1.set_ylabel('Frequency (Hz)')
+#     plt.colorbar()
+
+    ax2=plt.subplot(2,1,2)
+    ind = np.where(np.abs(time_series)>1e-10)
+    sign_change = np.sign(np.mean(time_series))
+    ax2.plot(t[ind],time_series[ind]*sign_change,'o')
+    plt.xticks(rotation = 25)
+    ax2.grid()
+    
+    plt.savefig(filename)
