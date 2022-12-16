@@ -12,8 +12,7 @@ warnings.filterwarnings("ignore")
 
 # cable='whidbey'
 cable = 'seadasn'
-record_length = 10 #minutes
-y_max = record_length * 60 * 100
+record_length = 10 
 t0 = datetime.datetime(2022, 11, 11, 0, 16-1, 0)
 
 # boioioing
@@ -60,6 +59,8 @@ for day in range(11, 15, 1):
 
             data_subset_filtered1 = filtfilt(b,a,data_subset,axis=0)
             data_subset_filtered2 = filtfilt(d,c,data_subset,axis=0)
+            y_max = len(data_subset) / 100
+
 
 
             time_change = datetime.timedelta(hours = -8)
@@ -71,7 +72,7 @@ for day in range(11, 15, 1):
 
             if data_subset.max() >= 30:
                 fig, axs = plt.subplots(
-                    2, 3, figsize = (20,20), gridspec_kw={'height_ratios': [3, 1]}
+                    2, 3, figsize = (18,18), gridspec_kw={'height_ratios': [3, 1]}
                 )
                 # unfiltered data
                 axs[0,0].imshow(
