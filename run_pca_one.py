@@ -51,7 +51,7 @@ def main():
     
     
 def svd_analysis(q=10,N=24,dt=60,
-                 start_time = datetime.datetime(2022, 7, 15, 0, 0, 0), 
+                 start_time = datetime.datetime(2022, 11, 15, 7, 0, 0), 
                  outputfile='svd.pickle'):
     
     
@@ -67,7 +67,7 @@ def svd_analysis(q=10,N=24,dt=60,
         this_time = start_time + i*datetime.timedelta(minutes=dt)
         t.append(this_time)
         ft,f,k = fk_analysis(this_time,draw_figure=False,downsamplefactor=q,
-                            record_length = 2)
+                            record_length = 1)
         if len(ft) == 1:
             continue
 
@@ -89,8 +89,7 @@ def svd_analysis(q=10,N=24,dt=60,
         D[:,i] = this_column
     t=np.array(t)
   
-    print('D')
-    D.shape()
+   
     '''
     Calculate the SVD
     '''
@@ -115,9 +114,9 @@ def plot_svd(S,f,k,t,mode,time_series):
     '''
     vm = 0.1
     
-    plt.subplots(2,1,figsize=(10,10))
+    plt.subplots(3,1,figsize=(10,10))
 
-    ax1=plt.subplot(2,1,1)
+    ax1=plt.subplot(3,1,1)
     plt.title(f'Fraction of variance in 1st mode: {100*max(S)/sum(S)}%')
     c=plt.imshow(mode,aspect='auto',vmin=0,vmax=vm,extent=[k[0],k[-1],f[0],f[-1]],cmap='gray_r')
 
@@ -127,12 +126,19 @@ def plot_svd(S,f,k,t,mode,time_series):
     ax1.set_ylabel('Frequency (Hz)')
 #     plt.colorbar()
 
-    ax2=plt.subplot(2,1,2)
+    ax2=plt.subplot(3,1,2)
     ind = np.where(np.abs(time_series)>1e-10)
     sign_change = np.sign(np.mean(time_series))
     ax2.plot(t[ind],time_series[ind]*sign_change,'o')
     plt.xticks(rotation = 25)
     ax2.grid()
+    
+    #ax3=plt.subplot(3,1,3)
+    #ind = np.where(np.abs(time_series)>1e-10)
+    #sign_change = np.sign(np.mean(time_series))
+    #ax3.plot(t[ind],S,'o')
+    #plt.xticks(rotation = 25)
+    #ax3.grid()
     
    
     #plt.savefig('svd_plot_2min_stacks.pdf')

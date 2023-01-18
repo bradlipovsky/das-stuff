@@ -161,6 +161,7 @@ def local_earthquake_quicklook(dates,datafilt,st,st2,
     ax.xaxis_date()
     ax.autoscale(enable=True, axis='x', tight=True)
     plt.grid()
+    
 
 
     if skip_seismograms==False:
@@ -189,7 +190,8 @@ def local_earthquake_quicklook(dates,datafilt,st,st2,
         ax.xaxis_date()
         ax.set_xlim((min(times_from_das),max(times_from_das)))
         plt.grid()
-    
+        plt.savefig('osowashington.png')
+        plt.savefig('osowashington.pdf')
     
 
     fig.suptitle(stitle,fontsize=20)
@@ -197,6 +199,7 @@ def local_earthquake_quicklook(dates,datafilt,st,st2,
     
     if filename==None:
         plt.show()
+        
     else:
         plt.savefig(filename)
         plt.close()
@@ -225,6 +228,7 @@ def data_quicklook(     dates,datafilt,
     ax.xaxis.set_major_formatter(date_format)
     ax.xaxis_date()
     plt.grid()
+   
     if ylim is not None:
         ax.set_ylim(ylim)
     
@@ -234,8 +238,10 @@ def data_quicklook(     dates,datafilt,
     
     if filename==None:
         plt.show()
+        
+     
     else:
-        plt.savefig(filename)
+        
         plt.close()
         
 def fk_analysis(t0, draw_figure = True,downsamplefactor=5,cable = 'whidbey', record_length = 1,
