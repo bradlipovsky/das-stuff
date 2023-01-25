@@ -126,8 +126,8 @@ def open_sintela_file(file_base_name,t0,pth,
 
 def local_earthquake_quicklook(dates,datafilt,st,st2,
                         x_max,stitle,filename=None,
-                        skip_seismograms=False,
-                        das_vmax=0.1,
+                        skip_seismograms=True,
+                        das_vmax=0.2,
                         network_name=''):
     '''
     Make a nice plot of the DAS data and some local seismic stations
