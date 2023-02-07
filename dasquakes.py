@@ -133,7 +133,7 @@ def local_earthquake_quicklook(dates,datafilt,st,st2,
     Make a nice plot of the DAS data and some local seismic stations
     '''
     dx = x_max / datafilt.shape[1]
-    fig,ax=plt.subplots(figsize=(8,12))
+    fig,ax=plt.subplots(figsize=(10,12))
     date_format = mdates.DateFormatter('%H:%M:%S')
     
     # Subplot: DAS Data
@@ -151,12 +151,15 @@ def local_earthquake_quicklook(dates,datafilt,st,st2,
     # Subplot: Single DAS Channel
     ax = plt.subplot(4,1,2)
     fig.patch.set_facecolor('w')
-#     graph_spacing = -400
+    #graph_spacing = -400
+    #graph_spacing = -2
     graph_spacing = -20
-    for jj in (41,400,800,1400):
-        plt.plot(dates,datafilt[:,jj]-jj/graph_spacing,label=f'OD = {int(jj*dx)} m')
+    #for jj in (10,300,600,900,1200,3500):
+    #for jj in (41,500,1000,1500,):
+    for jj in range(0,datafilt.shape[1],int(datafilt.shape[1]/10)):
+        plt.plot(x_lims,datafilt[:,jj]-jj/graph_spacing,label=f'OD = {int(jj*dx)} m')
     plt.legend(loc='upper right')
-    ax.set_title(f'{network_name} Individual Channels')
+    ax.set_title(f'{network_name} Individual Channels, total N = '+str(datafilt.shape[1]))
     ax.xaxis.set_major_formatter(date_format)
     ax.xaxis_date()
     ax.autoscale(enable=True, axis='x', tight=True)
@@ -194,7 +197,7 @@ def local_earthquake_quicklook(dates,datafilt,st,st2,
         plt.savefig('osowashington.pdf')
     
 
-    fig.suptitle(stitle,fontsize=20)
+    fig.suptitle(stitle,fontsize=10)
     plt.tight_layout()
     
     if filename==None:
@@ -367,3 +370,22 @@ def svd_analysis(q=10,N=24,dt=60,
     file = open(f'{outputfile}.pickle', 'wb')
     pickle.dump((U,S,V,t,f,k), file)
     file.close()
+    
+    
+from math import radians, cos, sin, asin, sqrt
+
+def haversine(lon1, lat1, lon2, lat2):
+    """
+    Calculate the great circle distance in kilometers between two points 
+    on the earth (specified in decimal degrees)
+    """
+    # convert decimal degrees to radians 
+    lon1, lat1, lon2, lat2 = map(radians, [lon1, lat1, lon2, lat2])
+
+    # haversine formula 
+    dlon = lon2 - lon1 
+    dlat = lat2 - lat1 
+    a = sin(dlat/2)**2 + cos(lat1) * cos(lat2) * sin(dlon/2)**2
+    c = 2 * asin(sqrt(a)) 
+    r = 6371 # Radius of earth in kilometers. Use 3956 for miles. Determines return value units.
+    return c * r
