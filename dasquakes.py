@@ -126,7 +126,7 @@ def open_sintela_file(file_base_name,t0,pth,
 
 def local_earthquake_quicklook(dates,datafilt,st,st2,
                         x_max,stitle,filename=None,
-                        skip_seismograms=True,
+                        skip_seismograms=False,
                         das_vmax=0.2,
                         network_name=''):
     '''
@@ -156,8 +156,8 @@ def local_earthquake_quicklook(dates,datafilt,st,st2,
     graph_spacing = -20
     #for jj in (10,300,600,900,1200,3500):
     #for jj in (41,500,1000,1500,):
-    for jj in range(0,datafilt.shape[1],int(datafilt.shape[1]/10)):
-        plt.plot(x_lims,datafilt[:,jj]-jj/graph_spacing,label=f'OD = {int(jj*dx)} m')
+    for jj in range(0,datafilt.shape[1],int(datafilt.shape[1]/6)):
+        plt.plot(x_lims,10*datafilt[:,jj]-jj/graph_spacing,label=f'OD = {int(jj*dx)} m')
     plt.legend(loc='upper right')
     ax.set_title(f'{network_name} Individual Channels, total N = '+str(datafilt.shape[1]))
     ax.xaxis.set_major_formatter(date_format)
@@ -193,9 +193,8 @@ def local_earthquake_quicklook(dates,datafilt,st,st2,
         ax.xaxis_date()
         ax.set_xlim((min(times_from_das),max(times_from_das)))
         plt.grid()
-        plt.savefig('osowashington.png')
-        plt.savefig('osowashington.pdf')
-    
+        
+ 
 
     fig.suptitle(stitle,fontsize=10)
     plt.tight_layout()
