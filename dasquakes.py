@@ -156,7 +156,7 @@ def local_earthquake_quicklook(dates,datafilt,st,st2,
     graph_spacing = -20
     #for jj in (10,300,600,900,1200,3500):
     #for jj in (41,500,1000,1500,):
-    for jj in range(0,datafilt.shape[1],int(datafilt.shape[1]/6)):
+    for jj in range(80,datafilt.shape[1],int(datafilt.shape[1]/5)):
         plt.plot(x_lims,10*datafilt[:,jj]-jj/graph_spacing,label=f'OD = {int(jj*dx)} m')
     plt.legend(loc='upper right')
     ax.set_title(f'{network_name} Individual Channels, total N = '+str(datafilt.shape[1]))
