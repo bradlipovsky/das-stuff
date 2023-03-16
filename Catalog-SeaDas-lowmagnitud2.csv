@@ -1,0 +1,20 @@
+Magnitud,id_event,Location,detect_seismO,detect_das,clipped,channels,comments
+2.88,uw61891152,113.5903229,none,norecord,no,no,
+2.7,us6000ja7y,599.93577,none,norecord,no,no,
+2.9,us6000ja7t,601.710486,none,norecord,no,no,
+2.75,uw61898611,124.646945,none,norecord,no,no,
+2.91,uw61898541,121.801425,none,,no,no,
+2.95,uw61876107,178.5321,none,TRUE,no,3190,
+2.9,us6000infa,596.5551,yes,TRUE,si,5742,
+2.9,us6000i8av,599.6089165,none,norecord,no,no,
+2.7,us6000i80c,526.5222342,none,norecord,no,no,
+2.84,uw61856377,,none,no recortd,no,,
+2.95,uw61846212,78.62399,yes,TRUE,no,4460,
+2.92,uw61844657,161.00184,yes,FALSE,no,,
+2.81,uw61850651,79.24398,yes,FALSE,no,,
+2.7,uw61835187,277.0798,yes,FALSE,no,,
+2.7,us7000hcbz,603.19457,no,FALSE,no,no,
+2.8,us6000hmwy,602.20606,yes,FALSE,no,4466,no clear waveform
+2.77,uw61828387,282.6653,none,FALSE,no,,no clear waveform
+2.89,uw61819867,92.9805166,none,norecord,no,,
+2.8,us7000gz4k,602.21445,yes,TRUE,no,7020,
