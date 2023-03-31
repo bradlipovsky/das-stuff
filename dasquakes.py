@@ -7,6 +7,26 @@ from numpy.fft import fftshift, fft2, fftfreq
 from datetime import datetime as DT
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
+import geopy.distance
+from shapely.geometry import LineString
+import pandas as pd
+from scipy.signal import butter, filtfilt,detrend
+from scipy.fft import fft, ifft
+import scipy
+import obspy
+from obspy import UTCDateTime
+from obspy.core import Trace
+from obspy.clients.fdsn import Client
+from libcomcat.search import search
+from libcomcat.dataframes import get_summary_data_frame
+from obspy.signal.trigger import classic_sta_lta,recursive_sta_lta
+from obspy.signal.trigger import plot_trigger
+from scipy.signal import butter, filtfilt,detrend
+import numpy as np
+from numpy.polynomial import legendre as leg
+from numpy.linalg import lstsq
+import datetime
+from datetime import timedelta
 
 def data_wrangler(cable,record_length,t0):
     if cable == 'seadasn':
@@ -111,9 +131,9 @@ def open_sintela_file(file_base_name,t0,pth,
                 time = np.concatenate((time, this_time ))
                 
         except Exception as e: 
-            print('File problem with: %s'%this_file)
-            print(e)
-            
+            #print('File problem with: %s'%this_file)
+            #print(e)
+            print('stuff')
             # There's probably a better way to handle this...
             #             return [-1], [-1], [-1]
 
@@ -264,17 +284,74 @@ def fk_analysis(t0, draw_figure = True,downsamplefactor=5,cable = 'whidbey', rec
     
     return ft,f,k
 
-import geopy.distance
-from shapely.geometry import LineString
+
+#Function that returns the DAS data according to USGS earthquake events
+
+def das_downloader(event_df, this_id, cab):
+    this_event = event_df[event_df.id==this_id]
+    t0 = this_event['time'].iloc[0]
+
+    cable = cab
+    record_length = 1 #minutes
+
+    try:
+        if cable == 'seadasn':
+            prefix = 'seadasn'
+            network_name = 'SeaDAS-N'
+            if t0 < datetime.datetime(2022, 6, 20, 0, 0, 0):
+                datastore='/data/data0/seadasn_2022-03-17_2022-06-20/'
+            elif t0 > datetime.datetime(2022, 6, 20, 0, 0, 0) and t0 < datetime.datetime(2022, 10, 6, 0, 0, 0):
+                datastore='/data/data7/seadasn_2022-06-21_2022-10-06/'
+            elif t0 > datetime.datetime(2022, 11, 1, 0, 0, 0) and t0 < datetime.datetime(2022, 11, 5, 0, 0, 0):
+                datastore='/data/data4/seadasn_2021-11-01_2021-11-05/'
+            elif t0 > datetime.datetime(2022, 10, 13, 0, 0, 0) and t0 < datetime.datetime(2022, 11, 1, 0, 0, 0):
+                datastore='/data/data1/seadasn_2021-10-13_2021-11-01/'
+
+        elif cable == 'whidbey':
+            prefix = 'whidbey'
+            network_name='Whidbey-DAS'
+            
+            if t0 < datetime.datetime(2022, 10, 23, 4, 49, 0):
+                datastore = '/data/data5/Converted/'
+                
+            elif t0 > datetime.datetime(2022, 10, 23, 4, 49, 0):
+                datastore = '/data/data6/whidbey/'
+                
+
+        data,times,attrs = open_sintela_file(prefix,
+                                             t0,
+                                             datastore,
+                                             number_of_files=record_length,
+                                             verbose=True)
+        x_max=data.shape[1] * attrs['SpatialSamplingInterval']
+        #print('data:', data)
+        low_cut = 3
+        hi_cut = 8
+        
+        b,a = butter(2,[low_cut,hi_cut],'bp',fs=attrs['MaximumFrequency']*2,output='sos')
+        data_filt = filtfilt(b,a,data,axis=0)
+
+    except Exception as e:
+        print(f'caught {type(e)}: e')
+        data = None
+        times = None
+        dates = None
+        attrs = None
+        x_max = None
+        data_filt = None
+    return data, times, attrs, x_max, this_id, data_filt, t0
+
 
 #For sintela fiberroute and calibration files
-def fiber_channel_locator(fiber_file = 'fiberroute.csv', cal_file='calibration.csv', chan_spac = 6.3, num_chans = 1750):
+def fiber_channel_locator(das_data, attrs, fiber_file, cal_file, chan_spac = 6.3, num_chans = 1750):
     fiber_location = pd.read_csv(fiber_file, header=1)
     fiber_calibration = pd.read_csv(cal_file, header=1)
     fiber_distance = []
     opt_dis_merge = []
     chan_num = []
+    
 
+    
     for index_fib, row_fib in fiber_location.iterrows():
         if index_fib == 0 :
             fiber_distance.append(0)
@@ -310,21 +387,46 @@ def fiber_channel_locator(fiber_file = 'fiberroute.csv', cal_file='calibration.c
     coords_of_chans_x = []
     coords_of_chans_y = []
 
-
+    channel_number_counter = 0
     for index, values in fiber_location.iterrows():
+
         if index < len(fiber_location) - 1:
-            #print(values['Lat'], fiber_location.iloc[index+1]['Lat'])
+            
             xy_floats = [(fiber_location.iloc[index]['Long'], fiber_location.iloc[index]['Lat']),
                          (fiber_location.iloc[index+1]['Long'], fiber_location.iloc[index+1]['Lat'])]
             line = LineString(xy_floats)
+            
             num_points = int(round((fiber_location.iloc[index+1]['Opt Dist Interp'] - values['Opt Dist Interp']) / attrs['SpatialSamplingInterval']))
-            new_points = [line.interpolate(i/float(num_points - 1), normalized=True) for i in range(num_points)]
-            xs = [point.x for point in new_points]
-            ys = [point.y for point in new_points]
-            coords_of_chans_x.append(xs)
-            coords_of_chans_y.append(ys)
+            channel_number_counter += num_points
+            #print(channel_number_counter)
+            
+            channel_difference = das_data.shape[1] - channel_number_counter
+            
+            if index == len(fiber_location) - 2:
 
-    flat_x =  [item for sublist in coords_of_chans_x for item in sublist]
-    flat_y =  [item for sublist in coords_of_chans_y for item in sublist]
+                num_points = int(round((fiber_location.iloc[index+1]['Opt Dist Interp'] - values['Opt Dist Interp']) / attrs['SpatialSamplingInterval'])) + channel_difference
+                
+                new_points = [line.interpolate(i/float(num_points - 1), normalized=True) for i in range(num_points)]
+                xs = [point.x for point in new_points]
+                ys = [point.y for point in new_points]
+                coords_of_chans_x.append(xs)
+                coords_of_chans_y.append(ys)
+            
+            else:
+
+                num_points = int(round((fiber_location.iloc[index+1]['Opt Dist Interp'] - values['Opt Dist Interp']) / attrs['SpatialSamplingInterval']))
+                new_points = [line.interpolate(i/float(num_points - 1), normalized=True) for i in range(num_points)]
+                xs = [point.x for point in new_points]
+                ys = [point.y for point in new_points]
+                coords_of_chans_x.append(xs)
+                coords_of_chans_y.append(ys)
+            
+
+
+            
     
-    return fiber_location, flat_x, flat_y
+
+    flat_x =  [item for sublist in coords_of_chans_x for item in sublist] #Longitudes
+    flat_y =  [item for sublist in coords_of_chans_y for item in sublist] #Latitudes
+    
+    return fiber_location, fiber_calibration, flat_x, flat_y
