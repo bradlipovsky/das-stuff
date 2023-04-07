@@ -27,6 +27,7 @@ from numpy.polynomial import legendre as leg
 from numpy.linalg import lstsq
 import datetime
 from datetime import timedelta
+import csv
 
 def data_wrangler(cable,record_length,t0):
     if cable == 'seadasn':
@@ -343,7 +344,7 @@ def das_downloader(event_df, this_id, cab):
 
 
 #For sintela fiberroute and calibration files
-def fiber_channel_locator(das_data, attrs, fiber_file, cal_file, chan_spac = 6.3, num_chans = 1750):
+def fiber_channel_locator(das_data, attrs, fiber_file, cal_file, chan_spac = 6.3, num_chans = 1750, save_file = False):
     fiber_location = pd.read_csv(fiber_file, header=1)
     fiber_calibration = pd.read_csv(cal_file, header=1)
     fiber_distance = []
@@ -428,5 +429,16 @@ def fiber_channel_locator(das_data, attrs, fiber_file, cal_file, chan_spac = 6.3
 
     flat_x =  [item for sublist in coords_of_chans_x for item in sublist] #Longitudes
     flat_y =  [item for sublist in coords_of_chans_y for item in sublist] #Latitudes
+    
+    if save_file == True:
+        
+        interp_channel_dict = {'Channel Number': np.arange(1, len(flat_x)+1, 1),
+                              'Longitude': flat_x,
+                              'Latitude': flat_y}
+        
+        chan_interp_frame = pd.DataFrame(data = interp_channel_dict)
+
+        chan_interp_frame.to_csv('interpolated_channel_locations.csv', index=False)
+        
     
     return fiber_location, fiber_calibration, flat_x, flat_y
