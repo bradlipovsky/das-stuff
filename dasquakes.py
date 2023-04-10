@@ -11,7 +11,7 @@ from numpy.fft import fftshift, fft2, fftfreq
 from datetime import datetime as DT
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
-
+import matplotlib.transforms as mtransforms
 def data_wrangler(cable,record_length,t0):
     if cable == 'seadasn':
         prefix = 'seadasn'
@@ -135,70 +135,104 @@ def local_earthquake_quicklook(dates,datafilt,st,st2,
     Make a nice plot of the DAS data and some local seismic stations
     '''
     dx = x_max / datafilt.shape[1]
-    fig,ax=plt.subplots(figsize=(10,12))
     date_format = mdates.DateFormatter('%H:%M:%S')
+    #fig,axs=plt.subplots(figsize=(10,12))
+    fig,ax=plt.subplots(4,1, figsize=(10,12))
+    #fig, axs = plt.subplot_mosaic([['a)', 'a)'], ['b)', 'b)'], ['c)', 'c)'], ['d)', 'd)']],
+     #                         layout='constrained', figsize=(10,12))
+    #for label, ax in axs.items():
+     #   trans = mtransforms.ScaledTranslation(10/72, -5/72, fig.dpi_scale_trans)
+      #  ax.text(0.0, 1.0, label, transform=ax.transAxes + trans,
+       #     fontsize='medium', verticalalignment='top', fontfamily='serif',
+        #    bbox=dict(facecolor='0.7', edgecolor='none', pad=5.0))  
+ 
+    
+    
+        
+    
+    
     
     # Subplot: DAS Data
-    ax=plt.subplot(4,1,1)
-    ax.set_title(f'{network_name}')
-    # plt.imshow(datafilt.T,vmin=-0.1,vmax=0.1,cmap='seismic',aspect='auto')
+    ax[0]=plt.subplot(4,1,1)
+    #ax.set_title(f'{network_name}')
+    #plt.imshow(datafilt.T,vmin=-0.1,vmax=0.1,cmap='seismic',aspect='auto')
     x_lims = mdates.date2num(dates)
-    plt.imshow(datafilt.T,vmin=-das_vmax,vmax=das_vmax,
+    ax[0].imshow(datafilt.T,vmin=-das_vmax,vmax=das_vmax,
                cmap='seismic',aspect='auto', 
                extent=[x_lims[0],x_lims[-1],x_max,0])
-    ax.xaxis.set_major_formatter(date_format)
-    ax.xaxis_date()
+    ax[0].xaxis.set_major_formatter(date_format)
+    ax[0].set_ylabel('Linear distance along fiber-optic cable (m)',fontsize=10)
+    #plt.text(0, 0.0, 'A', bbox = {'facecolor': 'oldlace', 'alpha': 0.5, 'pad': 2})
+    ax[0].xaxis_date()
+    ax[0].text(0, 0.9, 'A', fontsize=15, transform=ax[0].transAxes)
     plt.grid()
     
+  
     # Subplot: Single DAS Channel
-    ax = plt.subplot(4,1,2)
+    ax[1] = plt.subplot(4,1,2)
     fig.patch.set_facecolor('w')
+    #
     #graph_spacing = -400
-    #graph_spacing = -2
-    graph_spacing = -20
-    #for jj in (10,300,600,900,1200,3500):
-    #for jj in (41,500,1000,1500,):
-    for jj in range(500,1500,200):
-        plt.plot(x_lims,10*datafilt[:,jj]-jj/graph_spacing,label=f'OD = {int(jj*dx)} m')
-    plt.legend(loc='upper right')
-    ax.set_title(f'{network_name} Individual Channels, total N = '+str(datafilt.shape[1]))
-    ax.xaxis.set_major_formatter(date_format)
-    ax.xaxis_date()
-    ax.autoscale(enable=True, axis='x', tight=True)
+  
+ 
+    #for jj in range(500,1500,200):
+    #for jj in range(600,datafilt.shape[1],1100):
+    #   ax[1].plot(x_lims,datafilt[:,jj]-jj/graph_spacing,label=f'OD = {int(jj*dx)} m')
+    #plt.plot(x_lims,datafilt[:,1500],label=f'OD = {int(1500*dx)} m')
+    #ax[1].plot(x_lims,datafilt[:,500],label=f'OD = {int(500*dx)} m')
+    #ax[1].plot(x_lims,datafilt[:,2300],label=f'OD = {int(2300*dx)} m')
+    ax[1].plot(x_lims,datafilt[:,1600],label=f'OD = {int(1600*dx)} m')
+    ax[1].plot(x_lims,datafilt[:,500],label=f'OD = {int(500*dx)} m')
+            #ax[1].plot(x_lims,datafilt[:,6],label=f'OD = {int(600*dx)} m')
+   
+    ax[1].legend(loc='upper right')
+        #ax.set_title(f'{network_name} Individual Channels, total N = '+str(datafilt.shape[1]))
+    ax[1].xaxis.set_major_formatter(date_format)
+    ax[1].xaxis_date()
+    #ax[1].set_ylabel('Strain rate waveforms')
+    ax[1].set_ylabel('Phase (radians)',  fontsize=10)
+    ax[1].autoscale(enable=True, axis='x', tight=True)
+    ax[1].text(0, 0.9, 'B', fontsize=15, transform=ax[1].transAxes)
     plt.grid()
+
     
 
 
     if skip_seismograms==False:
         
         # Subplot:  station 1
-        ax = plt.subplot(4,1,3)
-        for tr in st:
+         ax[2] = plt.subplot(4,1,3)
+    for tr in st:
             times_from_das = np.linspace(x_lims[0],x_lims[-1],len(tr.data))
-            plt.plot(times_from_das,tr.data)
-        fig.patch.set_facecolor('w')
-        ax.set_title('UW NOWS HNN')
-        ax.xaxis.set_major_formatter(date_format)
-        ax.xaxis_date()
-        ax.set_xlim((min(times_from_das),max(times_from_das)))
-        plt.grid()
+            ax[2].plot(times_from_das,tr.data)
+            fig.patch.set_facecolor('w')
+            ax[2].set_title('UW NOWS HNN')
+            ax[2].xaxis.set_major_formatter(date_format)
+            ax[2].xaxis_date()
+            ax[2].set_ylabel('Ground motion (m/s)',fontsize=10)
+            ax[2].set_xlim((min(times_from_das),max(times_from_das)))
+            ax[2].text(0, 0.9, 'C', fontsize=15, transform=ax[2].transAxes)
+            plt.grid()
+     
     
 
-        # Subplot:  station 2
-        ax = plt.subplot(4,1,4)
-        for tr in st2:
-            times_from_das = np.linspace(x_lims[0],x_lims[-1],len(tr.data))
-            plt.plot(times_from_das,tr.data)
-        fig.patch.set_facecolor('w')
-        ax.set_title('IU COR BH1')
-        ax.xaxis.set_major_formatter(date_format)
-        ax.xaxis_date()
-        ax.set_xlim((min(times_from_das),max(times_from_das)))
-        plt.grid()
-        
+         #Subplot:  station 2
+            ax[3] = plt.subplot(4,1,4)
+            for tr in st2:
+                times_from_das = np.linspace(x_lims[0],x_lims[-1],len(tr.data))
+                ax[3].plot(times_from_das,tr.data)
+            fig.patch.set_facecolor('w')
+            ax[3].set_title('IU COR BH1')
+            ax[3].xaxis.set_major_formatter(date_format)
+            ax[3].xaxis_date()
+            ax[3].set_ylabel('Ground motion (m/s)', fontsize=10)
+            ax[3].set_xlim((min(times_from_das),max(times_from_das)))
+            ax[3].text(0, 0.9, 'D', fontsize=15, transform=ax[3].transAxes)
+            plt.grid()
+
  
 
-    fig.suptitle(stitle,fontsize=10)
+    fig.suptitle(stitle,fontsize=12)
     plt.tight_layout()
     
     if filename==None:
@@ -207,34 +241,33 @@ def local_earthquake_quicklook(dates,datafilt,st,st2,
     else:
         plt.savefig(filename)
         plt.close()
+   
+    #fig,ax=plt.subplots(figsize=(10,12))
     
-    fig,ax=plt.subplots(figsize=(10,12))
-    
-    fig.patch.set_facecolor('w')
+   # fig.patch.set_facecolor('w')
     #graph_spacing = -400
     #graph_spacing = -2
-    graph_spacing = -20
+    #graph_spacing = -20
     #for jj in (10,300,600,900,1200,3500):
     #for jj in (41,500,1000,1500,):
-    counter = 1
-    for jj in range(500,1500,200):
-        ax = plt.subplot(5,1,counter)
-        plt.plot(x_lims,10*datafilt[:,jj]-jj/graph_spacing,label=f'OD = {int(jj*dx)} m')
-        plt.legend(loc='upper right')
-        ax.set_title(f'{network_name} Individual Channels, total N = '+str(datafilt.shape[1]))
-        ax.xaxis.set_major_formatter(date_format)
-        ax.xaxis_date()
-        ax.autoscale(enable=True, axis='x', tight=True)
-        plt.grid()
-        counter += 1
-    if filename==None:
-        plt.show()
+    #counter = 1
+    #for jj in range(500,1500,200):
+     #   ax = plt.subplot(5,1,counter)
+      #  plt.plot(x_lims,10*datafilt[:,jj]-jj/graph_spacing,label=f'OD = {int(jj*dx)} m')
+      #  plt.legend(loc='upper right')
+       # ax.set_title(f'{network_name} Individual Channels, total N = '+str(datafilt.shape[1]))
+       # ax.xaxis.set_major_formatter(date_format)
+        #ax.xaxis_date()
+        #ax.autoscale(enable=True, axis='x', tight=True)
+        #plt.grid()
+        #counter += 1
+    #if filename==None:
+     #   plt.show()
         
-    else:
-        plt.savefig(filename+"_separated_plots")
-        plt.close()
-    
-    
+    #else:
+     #   plt.savefig(filename+"_separated_plots")
+      #  plt.close()
+
     
 def data_quicklook(     dates,datafilt,
                         x_max,stitle,filename=None,
